@@ -35,20 +35,11 @@ I used the [books dataset]([url](https://huggingface.co/datasets/bookcorpus)), w
 
 In this version of BERT, we target prepositions and either mask them out (P=50%), replace them with a random vocabulary word (P=30%), or leave as is (P=20%). 
 
-I trained with batch sizes of 256 using a GPU over 12 hours.
-
 ## Architecture
-The model represents words with embedding size = 768. The model has 4 transformer blocks, each with 4 heads. The model can support context lengths up to 1024 tokens but for training purposes, we only utilize 128 length sequences. We right pad sentences or truncate them so that each sentence is exactly 128 tokens. 
+The model represents words with embedding size = 768. The model has 4 transformer blocks, each with 4 heads. The model can support context lengths up to 1024 tokens but for training purposes, we only utilize 128 length sequences.
 
-There's 2 versions of the model: one using pytorch's Transformers class (model_official.py), and another where I build the transformer layer myself (model.py). For the latter, it's inspired by Andrej Karpathy's [basic transformer model](https://colab.research.google.com/drive/1JMLa53HDuA-i7ZBmqV7ZnA3c_fvtXnx-?usp=sharing)
+There's 2 versions of the model: one using pytorch's Transformers class (model_pytorch_transformers.py), and another where I build the transformer layer myself (model.py). For the latter, it's inspired by Andrej Karpathy's [basic transformer model](https://colab.research.google.com/drive/1JMLa53HDuA-i7ZBmqV7ZnA3c_fvtXnx-?usp=sharing)
 
 ## Results
 
-As of now, the model has learned to reliably predict prepositions for the prepositions we targeted. But it's not consistent at getting the correct preposition. 
-
-Will need to spend more time tuning the model as I don't have the resources to run it over a long period of time. 
-
-Todo
-- Verify my model's architecture is complex enough by seeing if I can overfit a small portion of the training data. Try to find the smallest model possible so I can be computationally efficient.
-- Find the best hyperparameters (such as learning rate)
-
+As of now, the model has learned to reliably predict prepositions for the prepositions we targeted. But it's not consistent at getting the correct preposition
