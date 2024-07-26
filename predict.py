@@ -3,7 +3,7 @@ import copy
 import torch
 from torch.nn import functional as F
 
-from utils import batch_to_token_ids, create_padded_att_mask
+from utils import batch_to_token_ids
 from train import flatten_indices
 
 
@@ -23,13 +23,15 @@ def remove_pad(sentence):
 def predict(model, batch, tokenizer, context_length, device):
     (
         tokenized_sentences,
+        attention_mask,
         masked_sentences_tokens,
         masked_indices,
     ) = batch_to_token_ids(batch["text"], tokenizer, context_length, device)
 
     model.eval()
     with torch.no_grad():
-        logits = model(masked_sentences_tokens, src_key_padding_mask=create_padded_att_mask(tokenized_sentences.attention_mask))
+        with torch.autocast(device_type=device, dtype=torch.bfloat16):
+            logits = model(masked_sentences_tokens, src_key_padding_mask=attention_mask)
         B, T, C = logits.shape
         logits = logits.view(B * T, C)
         probabilities = F.softmax(logits, dim=-1)
@@ -39,7 +41,7 @@ def predict(model, batch, tokenizer, context_length, device):
         new_sentences_tokens = infer_masked_tokens(masked_sentences_tokens, predicted_tokens, masked_indices)
         new_sentences_tokens = new_sentences_tokens.reshape(B, T)
 
-        orig_sentences = tokenizer.batch_decode(tokenized_sentences.input_ids)
+        orig_sentences = tokenizer.batch_decode(tokenized_sentences)
         masked_sentences = tokenizer.batch_decode(masked_sentences_tokens)
         new_sentences = tokenizer.batch_decode(new_sentences_tokens)
 

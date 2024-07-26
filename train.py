@@ -5,7 +5,7 @@ from typing import List
 import torch
 from torch.nn.functional import cross_entropy
 
-from utils import batch_to_token_ids, create_padded_att_mask
+from utils import batch_to_token_ids
 
 
 def flatten_indices(indices_2d: List[List[int]], seq_length: int) -> List[int]:
@@ -28,20 +28,20 @@ def compute_loss(model, batch_sentences, tokenizer, config, device, loss_fn):
     """
     (
         tokenized_sentences,
+        attention_mask,
         masked_sentences,
         masked_indices,
     ) = batch_to_token_ids(batch_sentences, tokenizer, config["context_length"], device)
 
     with torch.autocast(device_type=device, dtype=torch.bfloat16):
         predictions = model(
-            masked_sentences, src_key_padding_mask=create_padded_att_mask(tokenized_sentences.attention_mask)
+            masked_sentences, src_key_padding_mask=attention_mask
         )
-
-    B, T, _ = predictions.shape
-    flattened_mask_indices = flatten_indices(masked_indices, T)
-    predictions = predictions.reshape(B * T, -1)[flattened_mask_indices]
-    orig_sentences_tokens = tokenized_sentences.input_ids.reshape(B * T)[flattened_mask_indices]
-    return loss_fn(predictions, orig_sentences_tokens)
+        B, T, _ = predictions.shape
+        flattened_mask_indices = flatten_indices(masked_indices, T)
+        predictions = predictions.reshape(B * T, -1)[flattened_mask_indices]
+        orig_sentences_tokens = tokenized_sentences.reshape(B * T)[flattened_mask_indices]
+        return loss_fn(predictions, orig_sentences_tokens)
 
 
 def train(

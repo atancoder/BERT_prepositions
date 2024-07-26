@@ -85,18 +85,22 @@ def batch_to_token_ids(
     preposition_tokens_ids = get_preposition_token_ids(tokenizer)
     tokenized_sentences = tokenizer(
         batch_sentences,
-        return_tensors="pt",
         padding=True,
         truncation=True,
+        return_tensors='pt',
         max_length=context_length,
     )
+    attention_mask = create_padded_att_mask(tokenized_sentences.attention_mask)
+    tokenized_sentences = tokenized_sentences.input_ids
     masked_sentences, masked_indices = apply_masking(
-        tokenized_sentences.input_ids,
+        tokenized_sentences,
         tokenizer,
         preposition_tokens_ids,
     )
+    
     return (
         tokenized_sentences.to(device),
+        attention_mask.to(device),
         masked_sentences.to(device),
         masked_indices,
     )
