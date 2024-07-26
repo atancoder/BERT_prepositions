@@ -35,7 +35,7 @@ def get_model(tokenizer, config, saved_model_file):
     model = BERTModel(tokenizer.vocab_size, config, DEVICE)
     print(f"Model has {sum(p.numel() for p in model.parameters()) / 1e6}M params")
     model = torch.compile(model)
-    if os.path.exists(saved_model_file):
+    if saved_model_file and os.path.exists(saved_model_file):
         print(f"Loading existing model: {saved_model_file}")
         model.load_state_dict(
             torch.load(
@@ -103,7 +103,7 @@ def make_inference(
     model_config,
 ):
     config = load_config(model_config)
-    dataloader = get_books_dataloader(config["batch_size"])
+    dataloader = get_books_dataloader(batch_size=10)
     tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
     if not os.path.exists(saved_model_file):
         raise Exception("Must have a pretrained model")

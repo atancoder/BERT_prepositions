@@ -8,7 +8,13 @@ from torch.utils.data import DataLoader
 
 from prepositions import PREPOSITIONS_LIST
 
-
+def create_padded_att_mask(attention_mask):
+    """
+    Attention mask is a 2D tensor representing 0s for padding and 1s for not padding
+    For masking, we want to invert the 0s and 1s
+    """
+    return (1 - attention_mask).type(torch.float)
+    
 def flatten_indices(batch_indices: List[List[int]], context_length: int) -> List[int]:
     """
     Flattens the batch_indices list into 1D
@@ -26,14 +32,16 @@ def flatten_indices(batch_indices: List[List[int]], context_length: int) -> List
     return flattened_indices
 
 
-def get_books_dataloader(batch_size, max_size=10000):
+def get_books_dataloader(batch_size, max_size=None):
     # Load the BookCorpus dataset
     bookcorpus = load_dataset("bookcorpus")
 
     # Access the train split
     train_dataset = bookcorpus["train"]
 
-    random_indices = torch.randperm(len(train_dataset))[:max_size].tolist()
+    random_indices = torch.randperm(len(train_dataset)).tolist()
+    if max_size:
+        random_indices = random_indices[:max_size]
     train_dataset = train_dataset.select(random_indices)
     return DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 

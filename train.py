@@ -1,10 +1,11 @@
 import time
+import shutil
 from typing import List
 
 import torch
 from torch.nn.functional import cross_entropy
 
-from utils import batch_to_token_ids
+from utils import batch_to_token_ids, create_padded_att_mask
 
 
 def flatten_indices(indices_2d: List[List[int]], seq_length: int) -> List[int]:
@@ -33,14 +34,13 @@ def compute_loss(model, batch_sentences, tokenizer, config, device, loss_fn):
 
     with torch.autocast(device_type=device, dtype=torch.bfloat16):
         predictions = model(
-            masked_sentences,
-            tokenized_sentences.attention_mask.type(torch.float),
+            masked_sentences, src_key_padding_mask=create_padded_att_mask(tokenized_sentences.attention_mask)
         )
 
     B, T, _ = predictions.shape
     flattened_mask_indices = flatten_indices(masked_indices, T)
     predictions = predictions.reshape(B * T, -1)[flattened_mask_indices]
-    orig_sentences_tokens = orig_sentences_tokens.reshape(B * T)[flattened_mask_indices]
+    orig_sentences_tokens = tokenized_sentences.input_ids.reshape(B * T)[flattened_mask_indices]
     return loss_fn(predictions, orig_sentences_tokens)
 
 
@@ -69,12 +69,13 @@ def train(
             optimizer.step()
             optimizer.zero_grad()
             if batch_id % 10 == 0:
-                loss, current = loss.item(), (batch_id + 1) * len(batch)
+                loss, current = loss.item(), (batch_id + 1) * len(batch["text"])
                 print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-                print(f"{int((time.time() - start) / 60)} minutes have elapsed")
-                print("Saving model")
-                torch.save(model.state_dict(), f"{saved_model_file}")
-
+                print(f"{((time.time() - start) / 60):.2f} minutes have elapsed")
+                if saved_model_file:
+                    torch.save(model.state_dict(), "tmp_model.pt")
+                    shutil.move("tmp_model.pt", saved_model_file)
+                    print("Saved model")
 
 def evaluate_model(model, tokenizer, dataloader, config, device) -> float:
     model.eval()
